@@ -54,7 +54,11 @@ public class Person {
     public Person() {
     }
 
-    public Person(Integer personId, String firstname, String lastname, String patronymic, LocalDate birthDate, String citizenship, String passportSeries, String passportNumber, String passportIssuedBy, LocalDate passportIssuedDate, String passportDeptCode, String phone, String email, LocalDateTime createdAt) {
+    public Person(Integer personId, String firstname, String lastname,
+        String patronymic, LocalDate birthDate, String citizenship,
+        String passportSeries, String passportNumber, String passportIssuedBy,
+        LocalDate passportIssuedDate, String passportDeptCode, String phone,
+        String email, LocalDateTime createdAt) {
         this.personId = personId;
         this.firstname = firstname;
         this.lastname = lastname;
