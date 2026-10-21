@@ -1,4 +1,4 @@
-package alpha.hack.Entity;
+package alpha.hack.Enums;
 
 public enum Purpose {
     REPLENISHMENT_OF_WORKING_CAPITAL,

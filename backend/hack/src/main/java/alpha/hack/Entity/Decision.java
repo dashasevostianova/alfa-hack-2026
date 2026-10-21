@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import alpha.hack.Enums.DecisionType;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

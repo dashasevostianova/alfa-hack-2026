@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import alpha.hack.Enums.BusinessStatus;
+import alpha.hack.Enums.LegalForm;
+
 @Entity
 @Table(name = "business")
 public class Business {
