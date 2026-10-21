@@ -1,0 +1,8 @@
+package alpha.hack.Enums;
+
+public enum Purpose {
+    REPLENISHMENT_OF_WORKING_CAPITAL,
+    PURCHASE_OF_EQUIPMENT,
+    BUSINESS_DEVELOPMENT,
+    RENOVATION_OF_THE_PREMISES
+}
