@@ -1,4 +1,4 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
