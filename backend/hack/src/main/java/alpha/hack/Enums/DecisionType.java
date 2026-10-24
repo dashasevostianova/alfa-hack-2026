@@ -1,4 +1,4 @@
-package alpha.hack.Enums;
+package alpha.hack.enums;
 
 public enum DecisionType {
     APPROVED,
