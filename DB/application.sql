@@ -13,7 +13,8 @@ CREATE TABLE application (
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	CHECK (
-    (status = 'DRAFT') OR 
+    (status = 'DRAFT')
+	OR 
     (status != 'DRAFT' AND amount IS NOT NULL AND term_months IS NOT NULL AND purpose IS NOT NULL AND product_id IS NOT NULL)
 	)
 );
