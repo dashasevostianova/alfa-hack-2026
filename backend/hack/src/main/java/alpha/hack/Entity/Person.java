@@ -1,16 +1,24 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "person")
 public class Person {
 
     @Id
-    @Column(name = "person_id", nullable = false)
-    private Integer personId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
+    private Integer id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reg_id", nullable = false)
+    @JsonIgnore
+    private Reg reg;
 
     @Column(name = "firstname", nullable = false, columnDefinition = "TEXT")
     private String firstname;
@@ -18,7 +26,7 @@ public class Person {
     @Column(name = "lastname", nullable = false, columnDefinition = "TEXT")
     private String lastname;
 
-    @Column(name = "patronymic", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "patronymic", columnDefinition = "TEXT")
     private String patronymic;
 
     @Column(name = "birth_date", nullable = false)
@@ -54,12 +62,13 @@ public class Person {
     public Person() {
     }
 
-    public Person(Integer personId, String firstname, String lastname,
+    public Person(Integer id, Reg reg, String firstname, String lastname,
         String patronymic, LocalDate birthDate, String citizenship,
         String passportSeries, String passportNumber, String passportIssuedBy,
         LocalDate passportIssuedDate, String passportDeptCode, String phone,
         String email, LocalDateTime createdAt) {
-        this.personId = personId;
+        this.id = id;
+        this.reg = reg;
         this.firstname = firstname;
         this.lastname = lastname;
         this.patronymic = patronymic;
@@ -75,12 +84,20 @@ public class Person {
         this.createdAt = createdAt;
     }
 
-    public Integer getPersonId() {
-        return this.personId;
+    public Integer getId() {
+        return this.id;
     }
 
-    public void setPersonId(Integer personId) {
-        this.personId = personId;
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Reg getReg() {
+        return reg;
+    }
+
+    public void setReg(Reg reg) {
+        this.reg = reg;
     }
 
     public String getFirstname() {
