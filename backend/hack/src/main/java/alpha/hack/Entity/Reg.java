@@ -1,6 +1,7 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "reg")
@@ -14,6 +15,7 @@ public class Reg {
     private String login;
 
     @Column(name = "password_hash", nullable = false, length = 255)
+    @JsonIgnore
     private String passwordHash;
 
     public Reg() {
