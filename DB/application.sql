@@ -5,6 +5,7 @@ CREATE TABLE application (
 	id SERIAL PRIMARY KEY,
 	reg_id BIGINT NOT NULL REFERENCES reg(id) ON DELETE CASCADE,
 	product_id INTEGER REFERENCES product(id) ON DELETE CASCADE,
+	finances_id INTEGER NOT NULL REFERENCES finances(id) ON DELETE CASCADE,
 	amount INTEGER CHECK (amount > 0),
 	term_months INTEGER CHECK (term_months > 0),
 	purpose purpose_t,
