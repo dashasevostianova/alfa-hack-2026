@@ -4,13 +4,17 @@ CREATE TYPE app_status_t AS ENUM ('DRAFT', 'SUBMITTED', 'DOCS_REQUESTED', 'IN_CH
 CREATE TABLE application (
 	id SERIAL PRIMARY KEY,
 	reg_id BIGINT NOT NULL REFERENCES reg(id) ON DELETE CASCADE,
-	product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-	amount INTEGER NOT NULL CHECK (amount > 0),
-	term_months INTEGER NOT NULL CHECK (term_months > 0),
-	purpose purpose_t NOT NULL,
+	product_id INTEGER REFERENCES product(id) ON DELETE CASCADE,
+	amount INTEGER CHECK (amount > 0),
+	term_months INTEGER CHECK (term_months > 0),
+	purpose purpose_t,
 	status app_status_t NOT NULL DEFAULT 'DRAFT',
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CHECK (
+    (status = 'DRAFT') OR 
+    (status != 'DRAFT' AND amount IS NOT NULL AND term_months IS NOT NULL AND purpose IS NOT NULL AND product_id IS NOT NULL)
+	)
 );
 
 CREATE OR REPLACE FUNCTION update_updated_at()
