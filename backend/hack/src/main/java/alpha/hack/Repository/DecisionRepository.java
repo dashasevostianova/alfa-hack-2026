@@ -1,8 +1,10 @@
-package alpha.hack.Repository;
+package alpha.hack.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import alpha.hack.Entity.Decision;
-import alpha.hack.Enums.DecisionType;
+
+import alpha.hack.entity.Decision;
+import alpha.hack.enums.DecisionType;
+
 import java.util.List;
 import java.util.Optional;
 

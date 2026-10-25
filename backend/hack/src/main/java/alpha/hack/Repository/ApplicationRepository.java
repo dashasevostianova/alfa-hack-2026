@@ -1,8 +1,10 @@
-package alpha.hack.Repository;
+package alpha.hack.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import alpha.hack.Entity.Application;
-import alpha.hack.Enums.ApplicationStatus;
+
+import alpha.hack.entity.Application;
+import alpha.hack.enums.ApplicationStatus;
+
 import java.util.List;
 
 public interface ApplicationRepository

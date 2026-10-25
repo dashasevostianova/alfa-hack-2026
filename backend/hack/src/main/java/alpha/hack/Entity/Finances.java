@@ -1,6 +1,7 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 @Entity
@@ -13,6 +14,7 @@ public class Finances {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "application_id", nullable = false)
+    @JsonIgnore
     private Application application;
 
     @Column(name = "revenue", nullable = false)

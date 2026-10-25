@@ -1,21 +1,31 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import alpha.hack.Enums.BusinessStatus;
-import alpha.hack.Enums.LegalForm;
+import alpha.hack.enums.BusinessStatus;
+import alpha.hack.enums.LegalForm;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "business")
 public class Business {
 
     @Id
-    @Column(name = "business_id", nullable = false)
-    private Integer businessId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
+    private Integer id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reg_id", nullable = false)
+    @JsonIgnore
+    private Reg reg;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "legal_form", nullable = false,
             columnDefinition = "legal_form_t")
     private LegalForm legalForm;
@@ -24,8 +34,9 @@ public class Business {
     private String fullname;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false,
-            columnDefinition = "status_b")
+            columnDefinition = "status_t")
     private BusinessStatus status;
 
     @Column(name = "inn", nullable = false, unique = true, length = 12)
@@ -43,9 +54,6 @@ public class Business {
     @Column(name = "okved", nullable = false, length = 10)
     private String okved;
 
-    @Column(name = "employees_count", nullable = false)
-    private Integer employeesCount = 0;
-
     @Column(name = "settlement_account", length = 20)
     private String settlementAccount;
 
@@ -55,8 +63,9 @@ public class Business {
     public Business() {
     }
 
-    public Business(Integer businessId, LegalForm legalForm, String fullname, BusinessStatus status, String inn, String ogrn, LocalDate registrationDate, String address, String okved, Integer employeesCount, String settlementAccount, LocalDateTime createdAt) {
-        this.businessId = businessId;
+    public Business(Integer id, Reg reg, LegalForm legalForm, String fullname, BusinessStatus status, String inn, String ogrn, LocalDate registrationDate, String address, String okved, String settlementAccount, LocalDateTime createdAt) {
+        this.id = id;
+        this.reg = reg;
         this.legalForm = legalForm;
         this.fullname = fullname;
         this.status = status;
@@ -65,17 +74,24 @@ public class Business {
         this.registrationDate = registrationDate;
         this.address = address;
         this.okved = okved;
-        this.employeesCount = employeesCount;
         this.settlementAccount = settlementAccount;
         this.createdAt = createdAt;
     }
 
-    public Integer getBusinessId() {
-        return this.businessId;
+    public Integer getId() {
+        return this.id;
     }
 
-    public void setBusinessId(Integer businessId) {
-        this.businessId = businessId;
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Reg getReg() {
+        return reg;
+    }
+
+    public void setReg(Reg reg) {
+        this.reg = reg;
     }
 
     public LegalForm getLegalForm() {
@@ -140,14 +156,6 @@ public class Business {
 
     public void setOkved(String okved) {
         this.okved = okved;
-    }
-
-    public Integer getEmployeesCount() {
-        return this.employeesCount;
-    }
-
-    public void setEmployeesCount(Integer employeesCount) {
-        this.employeesCount = employeesCount;
     }
 
     public String getSettlementAccount() {

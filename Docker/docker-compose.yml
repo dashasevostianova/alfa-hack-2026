@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build: ../backend/hack
+    container_name: credit_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      TZ: ${TZ:-Europe/Moscow}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   credit_pgdata:

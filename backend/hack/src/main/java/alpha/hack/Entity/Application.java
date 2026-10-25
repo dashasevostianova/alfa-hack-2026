@@ -1,13 +1,15 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
-import alpha.hack.Enums.ApplicationStatus;
-import alpha.hack.Enums.Purpose;
+import alpha.hack.enums.ApplicationStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "application")
@@ -31,11 +33,9 @@ public class Application {
     @Column(name = "term_months", nullable = false)
     private Integer termMonths;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "purpose", nullable = false,
-            columnDefinition = "purpose_t")
-    private Purpose purpose;
+    @Column(name = "purpose", nullable = false, columnDefinition = "purpose_t")
+    @ColumnTransformer(write = "?::purpose_t")
+    private String purpose;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -49,10 +49,13 @@ public class Application {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Finances> finances = new ArrayList<>();
+
     public Application() {
     }
 
-    public Application(Integer id, Reg reg, Product product, Integer amount, Integer termMonths, Purpose purpose, ApplicationStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Application(Integer id, Reg reg, Product product, Integer amount, Integer termMonths, String purpose, ApplicationStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.reg = reg;
         this.product = product;
@@ -104,12 +107,20 @@ public class Application {
         this.termMonths = termMonths;
     }
 
-    public Purpose getPurpose() {
+    public String getPurpose() {
         return this.purpose;
     }
 
-    public void setPurpose(Purpose purpose) {
+    public void setPurpose(String purpose) {
         this.purpose = purpose;
+    }
+
+    public List<Finances> getFinances() {
+        return finances;
+    }
+
+    public void setFinances(List<Finances> finances) {
+        this.finances = finances;
     }
 
     public ApplicationStatus getStatus() {

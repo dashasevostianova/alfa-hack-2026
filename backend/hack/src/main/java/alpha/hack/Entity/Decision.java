@@ -1,10 +1,10 @@
-package alpha.hack.Entity;
+package alpha.hack.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import alpha.hack.Enums.DecisionType;
+import alpha.hack.enums.DecisionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
