@@ -1,3 +1,4 @@
+import { formationApi, formationDemo } from './formation';
 import type { Api, LoanApplication, LoanProduct, Profile, User } from '../types';
 import { mockApi } from './mock';
 
@@ -47,4 +48,4 @@ const httpApi: Api = {
   createApplication: (body) => request<LoanApplication>('/applications', 'POST', body),
 };
 
-export const api: Api = useMocks ? mockApi : httpApi;
+export const api: Api = formationDemo ? { ...mockApi, ...formationApi } : useMocks ? mockApi : httpApi;

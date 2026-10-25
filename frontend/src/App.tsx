@@ -1,3 +1,4 @@
+import { FormationPage } from './pages/FormationPage';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { api } from './api';
@@ -39,6 +40,7 @@ export default function App() {
     <Route element={<Layout />}>
       <Route path="/data" element={<DataPage />} />
       <Route path="/calculator" element={<CalculatorPage />} />
+      <Route path="/applications/:id/formation" element={<FormationPage />} />
       <Route path="/applications" element={<ApplicationsPage />} />
       <Route path="/approved/:id" element={<ApprovedPage />} />
     </Route>

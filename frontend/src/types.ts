@@ -9,7 +9,21 @@ export interface User {
   profileComplete: boolean;
 }
 
-// TODO: согласовать окончательный состав персональных и бизнес-данных.
+export interface ManualBusiness {
+  legalForm: 'OOO' | 'IP';
+  ogrn: string;
+  registrationDate: string;
+  okved: string;
+  status: 'ACTIVE' | 'LIQUIDATED' | 'BANKRUPT';
+}
+export interface ManualFinances {
+  netProfit: string;
+  currentLoans: string;
+  taxArrears: string;
+  equity: string;
+  assets: string;
+}
+
 export interface Profile {
   fullName: string;
   email: string;
@@ -19,6 +33,8 @@ export interface Profile {
   inn: string;
   industry: string;
   monthlyRevenue: number;
+  manualBusiness?: ManualBusiness;
+  manualFinances?: ManualFinances;
 }
 
 export interface LoanProduct {

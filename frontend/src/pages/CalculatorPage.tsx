@@ -1,3 +1,4 @@
+import { formationDemo } from '../api/formation';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -51,8 +52,8 @@ export function CalculatorPage() {
     if (!valid || busy) return;
     setBusy(true); setError('');
     try {
-      await api.createApplication({ amount, months, purpose, productId });
-      navigate('/applications');
+      const application = await api.createApplication({ amount, months, purpose, productId });
+      navigate(formationDemo ? `/applications/${application.id}/formation` : '/applications');
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(false); }
   }

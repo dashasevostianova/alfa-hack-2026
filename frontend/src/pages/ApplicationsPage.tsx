@@ -1,3 +1,4 @@
+import { formationDemo } from '../api/formation';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -44,6 +45,8 @@ export function ApplicationsPage() {
           <h2>{item.purpose}</h2><p className="muted">{item.productName} · {item.months} мес. · {item.annualRate}% годовых</p>
         </div><strong className="application-amount">{money(item.amount)}</strong></div>
         <StatusStepper status={item.status} />
+        {formationDemo && <p className="hint">Рассмотрение заявки и решение демонстрационные.
+          {' '}<Link className="inline-link" to={`/applications/${item.id}/formation`}>Данные формирования →</Link></p>}
         {item.status === 'COMPLETED' && item.decision && <div className={`decision decision-${item.decision.outcome.toLowerCase()}`}>
           <span className="decision-label">{item.decision.outcome === 'APPROVED' ? 'Одобрено'
             : item.decision.outcome === 'REVISION' ? 'Можно изменить условия' : 'Отказ'}</span>
