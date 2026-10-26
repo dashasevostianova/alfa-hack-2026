@@ -1,0 +1,74 @@
+name: alpha-credit
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-credit_db}
+      POSTGRES_USER: ${POSTGRES_USER:-credit_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      TZ: UTC
+    volumes:
+      - credit_pgdata:/var/lib/postgresql/data
+      - ./Docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  migrate:
+    image: postgres:16
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-credit_db}
+      PGUSER: ${POSTGRES_USER:-credit_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    volumes:
+      - ./Docker/init/03_integration.sql:/migration.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migration.sql]
+    restart: 'no'
+  formation:
+    build: ./backend/formation
+    volumes:
+      - ./backend/formation/data/companies_small.csv:/data/companies.csv:ro
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  parser:
+    build: ./parser
+    shm_size: 1gb
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  backend:
+    build: ./backend/hack
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-credit_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-credit_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      SPRING_JPA_SHOW_SQL: 'false'
+      FORMATION_URL: http://formation:8081
+      PARSER_URL: http://parser:8000
+      TZ: UTC
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      formation: {condition: service_healthy}
+      parser: {condition: service_healthy}
+  frontend:
+    build: ./frontend
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1/api/auth/csrf']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    ports:
+      - '127.0.0.1:${FRONTEND_PORT:-8088}:80'
+    depends_on:
+      backend: {condition: service_started}
+volumes:
+  credit_pgdata:

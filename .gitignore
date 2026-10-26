@@ -1,0 +1,11 @@
+node_modules/
+**/node_modules/
+**/target/
+**/dist/
+**/.venv/
+**/__pycache__/
+*.tsbuildinfo
+.env
+.env.local
+**/.env.local
+*.csv
