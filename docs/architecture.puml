@@ -1,0 +1,91 @@
+@startuml
+title Архитектура веб-сайта кредитного кабинета
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam ArrowColor #526477
+skinparam defaultFontName Arial
+
+actor "Пользователь" as User
+
+package "Браузер пользователя" {
+  component "Страницы сайта\nВход и регистрация" as AuthPages
+  component "Страница данных\nИНН и анкета" as ProfilePage
+  component "Подбор кредита\nСумма, срок, цель" as CalculatorPage
+  component "Заявки\nСтатусы и решения" as ApplicationsPage
+  component "Обработка заявки\nШкала и результат" as ProcessingPage
+  component "Продолжить\nПустая страница" as ApprovedPage
+  component "React API-клиент" as ApiClient
+  database "Локальное хранилище браузера\nРешения модели" as LocalStorage
+}
+
+component "Веб-сервер и прокси\nNginx" as Nginx
+
+package "Сервер приложения" {
+  component "Java API\nSpring Boot" as JavaApi
+  component "Вход и профиль" as AuthProfile
+  component "Заявки и каталог кредитов" as ApplicationService
+}
+
+database "PostgreSQL\nПользователи, анкеты,\nкомпании, финансы, заявки" as Postgres
+
+package "Проверка данных компании" {
+  component "Сервис проверки ИНН\nи подготовки показателей" as CompanyService
+  database "Таблица компаний\ncompanies_small.csv" as CompanyData
+}
+
+package "Подбор предложений" {
+  component "Парсер банковских ставок" as RateParser
+  cloud "Сайт банка\nКалькулятор ставок" as BankSite
+}
+
+package "Оценка заявки" {
+  component "HTTP-сервис модели\nи масштабирования признаков" as ModelService
+  database "Файлы модели\nlogistic_model.pkl и scaler.pkl" as ModelFiles
+}
+
+User --> AuthPages : открывает сайт
+User --> ProfilePage : заполняет анкету
+User --> CalculatorPage : выбирает кредит
+User --> ApplicationsPage : смотрит заявки
+User --> ProcessingPage : отправляет заявку
+
+AuthPages --> ApiClient : вход и регистрация
+ProfilePage --> ApiClient : сохранить анкету и проверить ИНН
+CalculatorPage --> ApiClient : получить условия и отправить заявку
+ApplicationsPage --> ApiClient : загрузить список заявок
+ProcessingPage --> ApiClient : загрузить данные заявки
+ProcessingPage --> ModelService : отправить признаки заявки
+ProcessingPage --> LocalStorage : сохранить ответ модели
+ApplicationsPage --> LocalStorage : показать локально сохраненное решение
+ProcessingPage --> ApprovedPage : одобрено
+
+ApiClient --> Nginx : запросы сайта и API
+Nginx --> JavaApi : маршруты API
+Nginx --> ModelService : запрос оценки модели
+
+JavaApi --> AuthProfile : учетная запись и анкета
+JavaApi --> ApplicationService : предложения и заявки
+AuthProfile --> Postgres : профиль и учетные записи
+AuthProfile --> CompanyService : подготовить данные компании
+ApplicationService --> Postgres : продукты, заявки и финансы
+ApplicationService --> CompanyService : сведения компании и возраст бизнеса
+ApplicationService --> RateParser : запрос банковских предложений
+RateParser --> BankSite : получить актуальные ставки
+CompanyService --> CompanyData : найти компанию и финансовые данные
+ModelService --> ModelFiles : загрузить обученную модель
+
+note bottom of LocalStorage
+  Результат оценки хранится только
+  в этом браузере и не записывается
+  в PostgreSQL.
+end note
+
+note bottom of ApplicationService
+  Подбор ставки выполняется через Java API:
+  фронтенд не обращается к парсеру напрямую.
+end note
+
+@enduml

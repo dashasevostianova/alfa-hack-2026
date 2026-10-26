@@ -1,0 +1,1 @@
+CALC_URL = "https://alfabank.ru/sme/profits/?utm_referrer=https%3a%2f%2faway.vk.ru%2f"
