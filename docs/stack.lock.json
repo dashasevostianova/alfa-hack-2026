@@ -1,0 +1,130 @@
+{
+  "lockfileVersion": 1,
+  "project": "alpha-credit",
+  "description": "Key language, framework, and infrastructure versions. Package-manager manifests and lockfiles remain authoritative for dependency installation.",
+  "languages": {
+    "java": {
+      "version": "25",
+      "source": "backend/hack/pom.xml",
+      "buildTool": {
+        "name": "Apache Maven",
+        "version": "3.10.0",
+        "source": "backend/hack/.mvn/wrapper/maven-wrapper.properties"
+      }
+    },
+    "typescript": {
+      "runtime": {
+        "name": "Node.js",
+        "version": "22",
+        "minimumVersion": "22.12",
+        "source": "frontend/Dockerfile and frontend/README.md"
+      },
+      "compiler": {
+        "name": "TypeScript",
+        "version": "5.9.3",
+        "source": "frontend/package-lock.json"
+      }
+    },
+    "python": {
+      "parser": {
+        "version": "3.11",
+        "source": "parser/Dockerfile"
+      },
+      "formation": {
+        "version": "3.12",
+        "source": "backend/formation/Dockerfile"
+      },
+      "modelService": {
+        "version": "3.12",
+        "source": "model_service/Dockerfile"
+      }
+    }
+  },
+  "stack": {
+    "frontend": {
+      "framework": {
+        "name": "React",
+        "version": "19.3.1"
+      },
+      "router": {
+        "name": "React Router",
+        "version": "7.18.4"
+      },
+      "bundler": {
+        "name": "Vite",
+        "version": "7.3.7"
+      },
+      "testRunner": {
+        "name": "Vitest",
+        "version": "3.2.7"
+      },
+      "dependencyLockfile": "frontend/package-lock.json"
+    },
+    "backend": {
+      "framework": {
+        "name": "Spring Boot",
+        "version": "4.1.1"
+      },
+      "dependencyManager": "Maven",
+      "dependencies": [
+        "spring-boot-starter",
+        "spring-boot-starter-web",
+        "spring-boot-starter-data-jpa",
+        "postgresql",
+        "h2"
+      ],
+      "source": "backend/hack/pom.xml",
+      "note": "Spring Boot dependency management supplies versions for dependencies without explicit versions in pom.xml."
+    },
+    "database": {
+      "name": "PostgreSQL",
+      "version": "16",
+      "source": "compose.yaml"
+    },
+    "pythonServices": {
+      "parser": {
+        "dependencies": {
+          "fastapi": ">=0.100.0",
+          "uvicorn": ">=0.20.0",
+          "playwright": ">=1.40.0",
+          "beautifulsoup4": ">=4.12.0"
+        },
+        "source": "parser/requirements.txt",
+        "lockStatus": "Version ranges; not fully pinned."
+      },
+      "formation": {
+        "dependencies": {
+          "psycopg2-binary": ">=2.9,<3"
+        },
+        "source": "backend/formation/requirements.txt",
+        "lockStatus": "Version range; not fully pinned."
+      },
+      "modelService": {
+        "dependencies": {
+          "joblib": "1.5.3",
+          "scikit-learn": "1.9.1"
+        },
+        "source": "model_service/requirements.txt",
+        "lockStatus": "Direct dependencies pinned; transitive dependencies are resolved by pip."
+      }
+    },
+    "proxy": {
+      "name": "nginx",
+      "version": "alpine",
+      "source": "frontend/Dockerfile",
+      "note": "The alpine image tag is floating; use an image digest for an immutable container-image lock."
+    }
+  },
+  "nativeLockfiles": [
+    {
+      "path": "frontend/package-lock.json",
+      "manager": "npm",
+      "purpose": "Exact JavaScript dependency tree."
+    },
+    {
+      "path": "backend/hack/.mvn/wrapper/maven-wrapper.properties",
+      "manager": "Maven Wrapper",
+      "purpose": "Pins the Maven distribution; Maven dependencies are declared in pom.xml and managed by Spring Boot."
+    }
+  ]
+}
