@@ -58,7 +58,7 @@ public class ExternalServices {
         String bucket = ageBucket(businessAgeMonths, legalForm);
         String key = bucket + "|" + (collateral ? "С залогом" : "Без залога") + "|" + (legalForm.equals("IP") ? "Для ИП" : "Для ООО");
         CachedOffers cached = cache.get(key);
-        if (cached == null || cached.fetchedAt().plusSeconds(300).isBefore(Instant.now())) {
+        if (cached == null || !cached.fetchedAt().plus(Duration.ofDays(1)).isAfter(Instant.now())) {
             try {
                 Map<String, Object> response = parser.get().uri(uri -> uri.path("/offers")
                         .queryParam("legal_form", legalForm).queryParam("business_age_months", businessAgeMonths)
@@ -79,7 +79,9 @@ public class ExternalServices {
                     } else if (rate != null) throw new IllegalStateException();
                     validated.add(Collections.unmodifiableMap(new LinkedHashMap<>((Map<String, Object>) item)));
                 }
-                cached = new CachedOffers(List.copyOf(validated), Instant.now());
+                Instant fetchedAt = response.get("fetchedAt") instanceof String timestamp ? Instant.parse(timestamp) : Instant.now();
+                if (fetchedAt.isAfter(Instant.now()) || !fetchedAt.plus(Duration.ofDays(1)).isAfter(Instant.now())) throw new IllegalStateException();
+                cached = new CachedOffers(List.copyOf(validated), fetchedAt);
                 cache.put(key, cached);
             } catch (Exception error) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Не удалось получить предложения банка. Повторите запрос; заявка не отправлена.");

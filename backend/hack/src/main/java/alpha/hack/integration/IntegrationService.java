@@ -5,7 +5,6 @@ import alpha.hack.enums.Purpose;
 import alpha.hack.enums.LegalForm;
 import alpha.hack.enums.BusinessStatus;
 import alpha.hack.service.ApplicationService;
-import alpha.hack.fulfillment.DemoLoanReview;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -22,10 +21,9 @@ public class IntegrationService {
     private final ObjectMapper json;
     private final ExternalServices external;
     private final ApplicationService applications;
-    private final DemoLoanReview demoReview;
     private static final List<String> PURPOSES = List.of("Пополнение оборотных средств", "Покупка оборудования", "Развитие бизнеса", "Ремонт помещения");
-    public IntegrationService(JdbcTemplate jdbc, ObjectMapper json, ExternalServices external, ApplicationService applications, DemoLoanReview demoReview) {
-        this.jdbc = jdbc; this.json = json; this.external = external; this.applications = applications; this.demoReview = demoReview;
+    public IntegrationService(JdbcTemplate jdbc, ObjectMapper json, ExternalServices external, ApplicationService applications) {
+        this.jdbc = jdbc; this.json = json; this.external = external; this.applications = applications;
     }
     @SuppressWarnings("unchecked") private Map<String, Object> map(Object value) { return (Map<String, Object>) value; }
     private Map<String, Object> read(String value) { return map(json.readValue(value, Map.class)); }
@@ -150,6 +148,15 @@ public class IntegrationService {
         }
         var fulfillment = jdbc.queryForList("SELECT payload::text FROM loan_fulfillment WHERE application_id=?", String.class, id);
         if (!fulfillment.isEmpty()) result.put("fulfillment", read(fulfillment.getFirst()));
-        return demoReview.apply(user, id, result);
+        // Read old demo decisions for compatibility; all new decisions come from the model.
+        if (result.get("decision") == null) {
+            var legacy = jdbc.queryForList("SELECT payload::text FROM loan_demo_review WHERE application_id=?", String.class, id);
+            if (!legacy.isEmpty()) {
+                var review = read(legacy.getFirst());
+                result.put("status", "COMPLETED"); result.put("decision", review.get("decision"));
+                result.put("decisionSource", "DEMO"); result.put("decisionAt", review.get("at"));
+            }
+        }
+        return result;
     }
 }

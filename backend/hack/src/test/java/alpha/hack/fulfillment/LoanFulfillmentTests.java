@@ -94,14 +94,4 @@ class LoanFulfillmentTests {
             new MockMultipartFile("file", "bad.pdf", "application/pdf", new byte[(int)LoanFulfillmentService.MAX_PDF_SIZE + 1])))
             assertThrows(ResponseStatusException.class, () -> LoanFulfillmentService.validateFile(invalid));
     }
-    @Test void keepsMockDecisionThresholdsAndNeverOverridesRealDecision() {
-        assertEquals("APPROVED", DemoLoanReview.decision(2_000_000).get("outcome"));
-        assertEquals("REVISION", DemoLoanReview.decision(2_000_001).get("outcome"));
-        assertEquals("REVISION", DemoLoanReview.decision(5_000_000).get("outcome"));
-        assertEquals("REJECTED", DemoLoanReview.decision(5_000_001).get("outcome"));
-        var app = app();
-        clearInvocations(jdbc);
-        assertSame(app, new DemoLoanReview(jdbc, new ObjectMapper(), true).apply(7, 12, app));
-        verifyNoInteractions(jdbc);
-    }
 }

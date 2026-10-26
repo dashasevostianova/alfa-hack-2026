@@ -8,6 +8,7 @@ import http.cookiejar
 import json
 import os
 import time
+from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 import uuid
@@ -52,29 +53,40 @@ def run():
     client.call('/auth/register', 'POST', credentials, 201)
     profile = dict(fullName='Тестов Тест Тестович', email='signing@example.com', phone='+79990000000', passport='0000 123456',
                    birthDate='1990-01-01', citizenship='RU', companyName='ООО Подписание ' + suffix, inn='9' + suffix,
-                   industry='Разработка ПО', monthlyRevenue=500000,
+                   industry='Разработка ПО', monthlyRevenue=10000000,
                    manualBusiness=dict(legalForm='OOO', ogrn='', registrationDate='2020-01-01', okved='62.01', status='ACTIVE'),
-                   manualFinances=dict(netProfit='1000000', currentLoans='', taxArrears='', equity='', assets=''))
+                   manualFinances=dict(netProfit='20000000', currentLoans='', taxArrears='', equity='', assets=''))
     client.call('/profile', 'POST', profile)
     product = client.call('/loans/products')[0]
     print('Loading existing bank offers through Java/parser...', flush=True)
     quote = client.call('/loans/quote?collateral=false')
     offer = next(item for item in quote['offers'] if item['annualRate'] is not None)
-    draft = dict(productId=product['id'], amount=1000000, months=24, purpose='Развитие бизнеса', collateral=False,
+    draft = dict(productId=product['id'], amount=100000, months=24, purpose='Развитие бизнеса', collateral=False,
                  bankOfferId=offer['id'], annualRate=offer['annualRate'])
     client.call('/applications', 'POST', {**draft, 'annualRate': -1}, 409)
     app = client.call('/applications', 'POST', draft, 201)
     path = '/applications/' + app['id'] + '/fulfillment'
     client.call(path + '/contract', 'POST', expected=409)
-    variants = [client.call('/applications', 'POST', {**draft, 'amount': amount}, 201) for amount in (3000000, 6000000)]
-    time.sleep(16)
-    for other, outcome in zip(variants, ('REVISION', 'REJECTED')):
-        other_path = '/applications/' + other['id'] + '/fulfillment'
-        assert client.call('/applications/' + other['id'])['decision']['outcome'] == outcome
-        for suffix_path in ('/contract', '/confirm', '/issue'):
-            client.call(other_path + suffix_path, 'POST', expected=409)
-    approved = client.call(path)
-    assert approved['decision']['outcome'] == 'APPROVED' and approved['decisionSource'] == 'DEMO'
+    # Compare the original frontend model call with Java's independent confirmation.
+    formation = client.call('/applications/' + app['id'])
+    finance = formation['finances'][0]
+    registered = datetime.fromisoformat(formation['company']['registration_date']).replace(tzinfo=timezone.utc)
+    features = dict(business_age_years=(datetime.now(timezone.utc)-registered).total_seconds()/86400/365.2425,
+                    legal_form=1, revenue=finance['revenue'], net_profit=finance['net_profit'],
+                    current_loans=int((finance['current_loans'] or 0)>0), purpose=2,
+                    amount=draft['amount'], term_months=draft['months'])
+    request = urllib.request.Request(BASE.removesuffix('/api') + '/model/predict', data=json.dumps(features).encode(),
+                                     headers={'Content-Type':'application/json'}, method='POST')
+    with client.http.open(request, timeout=40) as response:
+        prediction = json.loads(response.read())['prediction']
+    approved = client.call('/applications/' + app['id'] + '/model-decision', 'POST')
+    expected = 'APPROVED' if prediction == 1 else 'REJECTED'
+    assert approved['decision']['outcome'] == expected and approved['status'] == 'COMPLETED'
+    assert client.call('/applications/' + app['id'] + '/model-decision', 'POST')['decision'] == approved['decision']
+    if prediction == 0:
+        for action in ('/contract', '/confirm', '/issue'):
+            client.call(path + action, 'POST', expected=409)
+        raise AssertionError('The real model rejected this synthetic applicant; refusal protection passed, but a model-approved fixture is needed to test signing.')
     first = client.call(path + '/contract', 'POST')['fulfillment']
     assert first == client.call(path + '/contract', 'POST')['fulfillment']
     assert first['contract']['amount'] == draft['amount'] and first['contract']['annualRate'] == offer['annualRate']
@@ -121,7 +133,7 @@ def run():
     stranger.upload(path, pdf, expected=404)
     stranger.call(path + '/document', 'DELETE', expected=404)
     print('PASS: Java/PostgreSQL signing and issuance on main port; real offers preserved; PDF, upload limits, CSRF, '
-          'ownership, snapshots, concurrent idempotency, persistence and three demo outcomes verified.', flush=True)
+          'ownership, snapshots, concurrent idempotency, persistence and real model confirmation verified.', flush=True)
     print('Synthetic test accounts and applications remain in the local database.', flush=True)
 
 

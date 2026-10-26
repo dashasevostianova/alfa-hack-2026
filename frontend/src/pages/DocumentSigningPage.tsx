@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useMocks } from '../api';
 import { loanFulfillmentApi } from '../api/loanFulfillment';
 import { DocumentUploader } from '../components/DocumentUploader';
 import { LoanFulfillmentHistory } from '../components/LoanFulfillmentHistory';
@@ -107,7 +106,7 @@ export function DocumentSigningPage() {
               <Link className="button" to={`/applications/${id}/issued`}>{state.status === 'ISSUED' ? 'Посмотреть результат выдачи' : 'Перейти к выдаче кредита'}</Link></div>}
           </>}
         {!!busy && <p className="fulfillment-progress" role="status"><span className="fulfillment-spinner" aria-hidden="true" />{busy}</p>}
-        {!useMocks && <p className="hint">Договор, загруженный PDF и состояние оформления сохраняются через Java API в базе данных.</p>}
+        <p className="hint">Договор, загруженный PDF и состояние оформления сохраняются в базе данных.</p>
       </section>
       {state && <LoanFulfillmentHistory history={state.history} />}
     </>}

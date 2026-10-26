@@ -1,9 +1,28 @@
 from fastapi import FastAPI, HTTPException, Query
+import asyncio
+import os
+from contextlib import asynccontextmanager, suppress
 from parser import get_credit_rate, get_bank_text
 from parser import zalog, legal_form, period
+from offers import get_offers
+from offer_cache import OfferCache
 
 
-app = FastAPI(title="Parser")
+offer_cache = OfferCache(get_offers, os.environ.get('OFFERS_CACHE_FILE', '/tmp/alpha-bank-offers.json'))
+
+
+@asynccontextmanager
+async def lifespan(app):
+    refresh = asyncio.create_task(offer_cache.run())
+    try:
+        yield
+    finally:
+        refresh.cancel()
+        with suppress(asyncio.CancelledError):
+            await refresh
+
+
+app = FastAPI(title="Parser", lifespan=lifespan)
 
 @app.get("/")
 async def get_current_rate():
@@ -18,10 +37,8 @@ async def get_current_rate():
 @app.get("/offers")
 async def current_offers(legal_form: str = Query(pattern="^(OOO|IP)$"),
                          business_age_months: int = Query(ge=0, le=12000), collateral: bool = False):
-    from offers import get_offers, age_bucket
     try:
-        offers = await get_offers(legal_form, business_age_months, collateral)
-        return dict(offers=offers, businessAgeBucket=age_bucket(legal_form, business_age_months))
+        return await offer_cache.get(legal_form, business_age_months, collateral)
     except Exception as error:
         import logging
         logging.exception("Cannot read named calculator offers")

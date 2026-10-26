@@ -85,4 +85,29 @@ class ExternalServicesTests {
             assertTrue(accepted.get());
         } finally { server.stop(0); }
     }
+
+    @Test void preservesParserTimestampAndRejectsExpiredOffers() throws Exception {
+        var expired = new java.util.concurrent.atomic.AtomicBoolean();
+        String fetchedAt = java.time.Instant.now().minusSeconds(3600).toString();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/offers", exchange -> {
+            String timestamp = expired.get() ? java.time.Instant.now().minusSeconds(86401).toString() : fetchedAt;
+            byte[] response = ("{\"businessAgeBucket\":\"До 9 месяцев\",\"fetchedAt\":\"" + timestamp
+                + "\",\"offers\":[{\"id\":\"credit\",\"name\":\"Кредит\",\"annualRate\":20,\"rateUnit\":\"annual\"}]}")
+                .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response); exchange.close();
+        });
+        server.start();
+        try {
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            var first = new ExternalServices(base, base);
+            assertEquals(fetchedAt, first.quote(6, false, "OOO").get("fetchedAt"));
+            expired.set(true);
+            // A Java restart must not reset the age of the persisted parser cache.
+            var restarted = new ExternalServices(base, base);
+            assertThrows(ResponseStatusException.class, () -> restarted.quote(6, false, "OOO"));
+        } finally { server.stop(0); }
+    }
 }

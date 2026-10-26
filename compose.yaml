@@ -41,9 +41,22 @@ services:
   parser:
     build: ./parser
     shm_size: 1gb
+    environment:
+      OFFERS_CACHE_FILE: /cache/offers.json
+    volumes:
+      - bank_offers_cache:/cache
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json')"]
       interval: 15s
+      timeout: 5s
+      retries: 10
+  scoring:
+    build:
+      context: .
+      dockerfile: model_service/Dockerfile
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/health')"]
+      interval: 10s
       timeout: 5s
       retries: 10
   backend:
@@ -55,12 +68,13 @@ services:
       SPRING_JPA_SHOW_SQL: 'false'
       FORMATION_URL: http://formation:8081
       PARSER_URL: http://parser:8000
-      LOAN_DEMO_DECISION_ENABLED: ${LOAN_DEMO_DECISION_ENABLED:-true}
+      MODEL_URL: http://scoring:8082
       TZ: UTC
     depends_on:
       migrate: {condition: service_completed_successfully}
       formation: {condition: service_healthy}
       parser: {condition: service_healthy}
+      scoring: {condition: service_healthy}
   frontend:
     build: ./frontend
     healthcheck:
@@ -72,5 +86,7 @@ services:
       - '127.0.0.1:${FRONTEND_PORT:-8088}:80'
     depends_on:
       backend: {condition: service_started}
+      scoring: {condition: service_healthy}
 volumes:
   credit_pgdata:
+  bank_offers_cache:

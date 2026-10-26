@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { httpLoanFulfillment as api } from './loanFulfillment.http';
+import { loanFulfillmentApi as api } from './loanFulfillment';
 
 const fetchMock = vi.fn<typeof fetch>();
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
