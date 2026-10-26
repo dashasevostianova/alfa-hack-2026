@@ -2,6 +2,7 @@ import { formationDemo } from '../api/formation';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { getModelDecision } from '../api/model';
 import { StatusStepper } from '../components/StatusStepper';
 import { errorMessage, money } from '../lib';
 import { useSession } from '../session';
@@ -20,15 +21,19 @@ export function ApplicationsPage() {
       try {
         const items = await api.getApplications();
         if (!active) return;
-        setApplications(items); setError('');
-        if (items.some((item) => item.status !== 'COMPLETED')) timeout = setTimeout(load, 3000);
+        const withLocalDecisions = items.map((item) => {
+          const localDecision = getModelDecision(user?.id ?? '', item.id);
+          return localDecision ? { ...item, status: 'COMPLETED' as const, decision: localDecision } : item;
+        });
+        setApplications(withLocalDecisions); setError('');
+        if (withLocalDecisions.some((item) => item.status !== 'COMPLETED')) timeout = setTimeout(load, 3000);
       } catch (err) {
         if (active) setError(errorMessage(err));
       } finally { if (active) setLoading(false); }
     }
     void load();
     return () => { active = false; clearTimeout(timeout); };
-  }, [attempt]);
+  }, [attempt, user?.id]);
 
   return <>
     <div className="page-heading"><p className="eyebrow">История обращений</p>
@@ -46,7 +51,7 @@ export function ApplicationsPage() {
         </div><strong className="application-amount">{money(item.amount)}</strong></div>
         <StatusStepper status={item.status} />
         {item.rateWarning && <p className="hint">{item.rateWarning}</p>}
-        {formationDemo && <p className="hint">Заявка сохранена. Модель принятия решения пока не подключена.
+        {formationDemo && item.status !== 'COMPLETED' && <p className="hint">Заявка сохранена и ожидает оценки.
           {' '}<Link className="inline-link" to={`/applications/${item.id}/formation`}>Данные формирования →</Link></p>}
         {item.status === 'COMPLETED' && item.decision && <div className={`decision decision-${item.decision.outcome.toLowerCase()}`}>
           <span className="decision-label">{item.decision.outcome === 'APPROVED' ? 'Одобрено'

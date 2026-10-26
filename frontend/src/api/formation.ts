@@ -6,7 +6,7 @@ export const formationDemo = !useMocks;
 export interface FormationResult extends LoanApplication {
   formationStatus: string;
   source: 'csv' | 'manual' | 'legacy';
-  company: { inn: string; ogrn: string | null; okved: string; legal_form: string; fullname: string };
+  company: { inn: string; ogrn: string | null; okved: string; legal_form: string; fullname: string; registration_date: string };
   finances: { revenue: number; net_profit: number; current_loans: number | null; tax_arrears: number | null }[];
   calculated: Record<string, string | null>;
   warnings: string[];

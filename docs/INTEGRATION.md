@@ -2,6 +2,8 @@
 
 Все внешние запросы проходят через Java `/api`. Внутренние formation и parser не публикуют порты. Авторизация — HttpSession; ID владельца берётся из сессии. Перед POST клиент получает GET `/auth/csrf` и посылает заголовок `X-CSRF-TOKEN`. После входа ID сессии и CSRF обновляются.
 
+Исключение: фронтенд вызывает отдельный сервис модели через same-origin `POST /model/predict` (без Java API и записи в БД). Сервис принимает строго восемь числовых полей `business_age_years`, `legal_form`, `revenue`, `net_profit`, `current_loans`, `purpose`, `amount`, `term_months` и возвращает `{prediction: 0 | 1}`. Решение хранится браузером в `localStorage` отдельно для пользователя и ID заявки; это отображаемый фронтендом результат, он не меняет статус или решение в PostgreSQL.
+
 | Метод | Путь после /api | Результат |
 | --- | --- | --- |
 | GET | /auth/csrf | `{headerName,token}` |
