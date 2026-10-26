@@ -25,9 +25,8 @@ services:
       PGUSER: ${POSTGRES_USER:-credit_user}
       PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
     volumes:
-      - ./Docker/init/03_integration.sql:/migration.sql:ro
-      - ./Docker/init/04_loan_fulfillment.sql:/loan-fulfillment.sql:ro
-    command: [psql, -v, ON_ERROR_STOP=1, -f, /migration.sql, -f, /loan-fulfillment.sql]
+      - ./Docker/init:/migrations:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/03_integration.sql, -f, /migrations/04_loan_fulfillment.sql]
     restart: 'no'
   formation:
     build: ./backend/formation
