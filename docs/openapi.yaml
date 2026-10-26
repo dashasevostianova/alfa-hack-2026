@@ -1,0 +1,904 @@
+openapi: 3.0.3
+info:
+  title: Alpha Credit Java API
+  version: 1.0.0
+  description: >
+    Контракт Java API кредитного кабинета. Все пути в этом файле указаны
+    относительно базового пути /api. Сервис оценки модели вызывается отдельно
+    по /model/predict и в этот контракт не входит.
+servers:
+  - url: /api
+    description: Текущий сайт через Nginx
+tags:
+  - name: Auth
+    description: Регистрация, вход, сессия и CSRF
+  - name: Profile
+    description: Анкета и сведения о компании
+  - name: Loans
+    description: Кредитные продукты и банковские предложения
+  - name: Applications
+    description: Заявки пользователя
+paths:
+  /auth/csrf:
+    get:
+      tags: [Auth]
+      summary: Получить CSRF-токен
+      operationId: getCsrfToken
+      description: Вызывать перед каждым POST; токен передается в заголовке, указанном в ответе.
+      security: []
+      responses:
+        '200':
+          description: CSRF-токен и имя заголовка для изменяющего запроса.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /auth/login-availability:
+    get:
+      tags: [Auth]
+      summary: Проверить доступность логина
+      operationId: checkLoginAvailability
+      security: []
+      parameters:
+        - name: login
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Результат проверки.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Зарегистрировать пользователя
+      operationId: registerUser
+      description: Успешная регистрация сразу создает сессию.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '201':
+          description: Пользователь зарегистрирован; сервер устанавливает сессионную cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Сессионная cookie Java HttpSession.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/CsrfError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Войти
+      operationId: loginUser
+      description: Успешный вход создает сессию и обновляет ее идентификатор.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Вход выполнен; сервер устанавливает сессионную cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Сессионная cookie Java HttpSession.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/CsrfError'
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Получить текущего пользователя
+      operationId: getCurrentUser
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Текущий пользователь.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выйти
+      operationId: logoutUser
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      security:
+        - sessionCookie: []
+      responses:
+        '204':
+          description: Сессия завершена.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/CsrfError'
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Получить анкету пользователя
+      operationId: getProfile
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Сохраненная анкета или null, если анкета еще не заполнена.
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: true
+                allOf:
+                  - $ref: '#/components/schemas/SavedProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Profile]
+      summary: Сохранить анкету
+      operationId: saveProfile
+      description: >
+        Сервер проверяет ИНН и формирует сведения о компании. Объект prepared
+        в запросе игнорируется; в ответе возвращается рассчитанный сервером.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '200':
+          description: Сохраненная анкета и подготовленные сервером данные.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/CsrfError'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+  /formation/companies/{inn}:
+    get:
+      tags: [Profile]
+      summary: Найти компанию по ИНН
+      operationId: lookupCompanyByInn
+      description: Сведения предоставляются локальным сервисом подготовки данных.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: inn
+          in: path
+          required: true
+          description: ИНН из 10 или 12 цифр.
+          schema:
+            type: string
+            pattern: '^\d{10}$|^\d{12}$'
+      responses:
+        '200':
+          description: Компания найдена или отсутствует в доступной таблице.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/CompanyLookupFound'
+                  - $ref: '#/components/schemas/CompanyLookupMissing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+  /loans/products:
+    get:
+      tags: [Loans]
+      summary: Получить кредитные продукты
+      operationId: getLoanProducts
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Каталог кредитных продуктов.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoanProduct'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /loans/quote:
+    get:
+      tags: [Loans]
+      summary: Получить предложения банков
+      operationId: getBankOffers
+      description: Возраст и форма бизнеса рассчитываются сервером по сохраненным реквизитам.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: collateral
+          in: query
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Предложения, соответствующие компании и выбранному залогу.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateQuote'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+  /applications:
+    get:
+      tags: [Applications]
+      summary: Получить заявки текущего пользователя
+      operationId: listApplications
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Заявки, новые первыми.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoanApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Applications]
+      summary: Создать заявку
+      operationId: createApplication
+      description: >
+        Сервер проверяет выбранное банковское предложение и годовую ставку,
+        затем сохраняет заявку и финансовые данные.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationDraft'
+      responses:
+        '201':
+          description: Заявка создана.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanApplication'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/CsrfError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+  /applications/{id}:
+    get:
+      tags: [Applications]
+      summary: Получить заявку и данные для оценки
+      operationId: getApplication
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Числовой идентификатор заявки.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+      responses:
+        '200':
+          description: Заявка, финансовые показатели и подготовленные сведения компании.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Java HttpSession cookie.
+  parameters:
+    CsrfHeader:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: Получить значение через GET /auth/csrf перед каждым POST.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Некорректный запрос или данные.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Нет активной сессии или неверные учетные данные.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    CsrfError:
+      description: CSRF-токен отсутствует или недействителен.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Конфликт данных, логина, компании или выбранного предложения.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unprocessable:
+      description: Данные не удалось подготовить или обработать.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    BadGateway:
+      description: Внешний сервис недоступен или вернул некорректные данные.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServerError:
+      description: Внутренняя ошибка сервера.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Заявка не найдена или недоступна текущему пользователю.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    CsrfToken:
+      type: object
+      required: [headerName, token]
+      properties:
+        headerName:
+          type: string
+          example: X-CSRF-TOKEN
+        token:
+          type: string
+    Credentials:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+          minLength: 3
+          maxLength: 40
+          pattern: '^[a-zA-Z0-9_.-]+$'
+        password:
+          type: string
+          minLength: 9
+          maxLength: 72
+          description: Минимум одна строчная и одна заглавная латинская буква.
+          format: password
+    User:
+      type: object
+      required: [id, regId, login, profileComplete]
+      properties:
+        id:
+          type: string
+          description: Идентификатор учетной записи в представлении API.
+        regId:
+          type: integer
+          format: int32
+        login:
+          type: string
+        profileComplete:
+          type: boolean
+    ManualBusiness:
+      type: object
+      properties:
+        legalForm:
+          type: string
+          enum: [OOO, IP]
+        ogrn:
+          type: string
+          nullable: true
+        registrationDate:
+          type: string
+          format: date
+        okved:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, LIQUIDATED, BANKRUPT]
+    ManualFinances:
+      type: object
+      properties:
+        netProfit:
+          type: string
+        currentLoans:
+          type: string
+          nullable: true
+        taxArrears:
+          type: string
+          nullable: true
+        equity:
+          type: string
+          nullable: true
+        assets:
+          type: string
+          nullable: true
+    ProfileInput:
+      type: object
+      required:
+        - fullName
+        - email
+        - phone
+        - passport
+        - companyName
+        - inn
+        - industry
+        - monthlyRevenue
+        - birthDate
+        - citizenship
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        passport:
+          type: string
+          description: Серия и номер паспорта; пробелы допускаются.
+        companyName:
+          type: string
+        inn:
+          type: string
+          pattern: '^\d{10}$|^\d{12}$'
+        industry:
+          type: string
+        monthlyRevenue:
+          type: integer
+          format: int32
+          minimum: 1
+        birthDate:
+          type: string
+          format: date
+        citizenship:
+          type: string
+        manualBusiness:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ManualBusiness'
+        manualFinances:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ManualFinances'
+    SavedProfile:
+      allOf:
+        - $ref: '#/components/schemas/ProfileInput'
+        - type: object
+          properties:
+            prepared:
+              $ref: '#/components/schemas/PreparedProfile'
+    PreparedProfile:
+      type: object
+      properties:
+        company:
+          $ref: '#/components/schemas/Company'
+        stored:
+          $ref: '#/components/schemas/StoredFinances'
+        report:
+          $ref: '#/components/schemas/FormationReport'
+    Company:
+      type: object
+      properties:
+        inn:
+          type: string
+        ogrn:
+          type: string
+          nullable: true
+        okved:
+          type: string
+        fullname:
+          type: string
+        registration_date:
+          type: string
+          format: date
+        legal_form:
+          type: string
+          enum: [OOO, IP]
+        status:
+          type: string
+          enum: [ACTIVE, LIQUIDATED, BANKRUPT]
+    StoredFinances:
+      type: object
+      properties:
+        revenue:
+          type: integer
+          format: int32
+          nullable: true
+        net_profit:
+          type: integer
+          format: int32
+        current_loans:
+          type: integer
+          format: int32
+          nullable: true
+        tax_arrears:
+          type: integer
+          format: int32
+          nullable: true
+    FormationReport:
+      type: object
+      properties:
+        kind:
+          type: string
+          example: formation_snapshot_v1
+        source:
+          type: string
+          enum: [csv, manual]
+        company:
+          $ref: '#/components/schemas/Company'
+        calculated:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+        warnings:
+          type: array
+          items:
+            type: string
+    CompanyLookupFound:
+      type: object
+      required: [found, inn, ogrn, okved, legal_form, registration_date, calculated, stored, warnings]
+      properties:
+        found:
+          type: boolean
+          enum: [true]
+        inn:
+          type: string
+        ogrn:
+          type: string
+          nullable: true
+        okved:
+          type: string
+        legal_form:
+          type: string
+          enum: [OOO, IP]
+        registration_date:
+          type: string
+          format: date
+        calculated:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+        stored:
+          $ref: '#/components/schemas/StoredFinances'
+        warnings:
+          type: array
+          items:
+            type: string
+    CompanyLookupMissing:
+      type: object
+      required: [found, inn]
+      properties:
+        found:
+          type: boolean
+          enum: [false]
+        inn:
+          type: string
+    LoanProduct:
+      type: object
+      required: [id, name, description, annualRate, minAmount, maxAmount, minMonths, maxMonths]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        description:
+          type: string
+        annualRate:
+          type: number
+          format: double
+          nullable: true
+        minAmount:
+          type: integer
+          format: int32
+        maxAmount:
+          type: integer
+          format: int32
+        minMonths:
+          type: integer
+          format: int32
+        maxMonths:
+          type: integer
+          format: int32
+    BankOffer:
+      type: object
+      required: [id, name, rateUnit, annualRate]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ratePercent:
+          type: number
+          format: double
+          nullable: true
+        rateText:
+          type: string
+          nullable: true
+        rateUnit:
+          type: string
+          enum: [annual, monthly, monthly_overpayment, not_published]
+        annualRate:
+          type: number
+          format: double
+          nullable: true
+        detailsUrl:
+          type: string
+          format: uri
+          nullable: true
+    RateQuote:
+      type: object
+      required: [offers, key, businessAgeMonths, businessAgeBucket, legalForm, collateral, fetchedAt, source]
+      properties:
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankOffer'
+        key:
+          type: string
+        businessAgeMonths:
+          type: integer
+        businessAgeBucket:
+          type: string
+        legalForm:
+          type: string
+          enum: [OOO, IP]
+        collateral:
+          type: boolean
+        fetchedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+          format: uri
+    ApplicationDraft:
+      type: object
+      required: [productId, amount, months, purpose, collateral, bankOfferId, annualRate]
+      properties:
+        productId:
+          oneOf:
+            - type: integer
+              format: int32
+            - type: string
+        amount:
+          type: integer
+          format: int32
+          minimum: 1
+        months:
+          type: integer
+          format: int32
+          minimum: 1
+        purpose:
+          type: string
+          enum:
+            - Пополнение оборотных средств
+            - Покупка оборудования
+            - Развитие бизнеса
+            - Ремонт помещения
+        collateral:
+          type: boolean
+        bankOfferId:
+          type: string
+        annualRate:
+          type: number
+          format: double
+    ApplicationStatus:
+      type: string
+      enum: [SUBMITTED, VERIFICATION, REVIEW, COMPLETED]
+    Decision:
+      type: object
+      nullable: true
+      required: [outcome, summary, reasons, recommendations]
+      properties:
+        outcome:
+          type: string
+          enum: [APPROVED, REJECTED, REVISION]
+        summary:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        suggestedAmount:
+          type: integer
+          format: int32
+          nullable: true
+    ApplicationFinance:
+      type: object
+      description: Строка финансовой записи, возвращаемая JDBC в snake_case.
+      properties:
+        id:
+          type: integer
+          format: int32
+        application_id:
+          type: integer
+          format: int32
+        revenue:
+          type: integer
+          format: int32
+        net_profit:
+          type: integer
+          format: int32
+        account_statements:
+          type: string
+          nullable: true
+        tax_arrears:
+          type: integer
+          format: int32
+          nullable: true
+        current_loans:
+          type: integer
+          format: int32
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    LoanApplication:
+      type: object
+      required: [id, productId, productName, amount, months, purpose, createdAt, status, formationStatus, decision, annualRate, finances, company, calculated, warnings, source]
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        productName:
+          type: string
+        amount:
+          type: integer
+          format: int32
+        months:
+          type: integer
+          format: int32
+        purpose:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        formationStatus:
+          type: string
+        decision:
+          $ref: '#/components/schemas/Decision'
+        annualRate:
+          type: number
+          format: double
+          nullable: true
+        bankOfferId:
+          type: string
+          nullable: true
+        bankOfferName:
+          type: string
+          nullable: true
+        rateWarning:
+          type: string
+          nullable: true
+        collateral:
+          type: boolean
+          nullable: true
+        finances:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationFinance'
+        company:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Company'
+        calculated:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+        warnings:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+          enum: [csv, manual, legacy]
