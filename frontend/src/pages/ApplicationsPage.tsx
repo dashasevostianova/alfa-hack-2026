@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { StatusStepper } from '../components/StatusStepper';
+import { LoanFulfillmentSummary } from '../components/LoanFulfillmentSummary';
 import { errorMessage, money } from '../lib';
 import { useSession } from '../session';
 import type { LoanApplication } from '../types';
@@ -46,7 +47,9 @@ export function ApplicationsPage() {
         </div><strong className="application-amount">{money(item.amount)}</strong></div>
         <StatusStepper status={item.status} />
         {item.rateWarning && <p className="hint">{item.rateWarning}</p>}
-        {formationDemo && <p className="hint">Заявка сохранена. Модель принятия решения пока не подключена.
+        {formationDemo && <p className="hint">{item.decisionSource === 'DEMO'
+          ? 'Рассмотрение демонстрационное: решение симулируется сервером. ML-модель пока не подключена.'
+          : 'Заявка сохранена. Решение и условия получены с сервера.'}
           {' '}<Link className="inline-link" to={`/applications/${item.id}/formation`}>Данные формирования →</Link></p>}
         {item.status === 'COMPLETED' && item.decision && <div className={`decision decision-${item.decision.outcome.toLowerCase()}`}>
           <span className="decision-label">{item.decision.outcome === 'APPROVED' ? 'Одобрено'
@@ -54,7 +57,7 @@ export function ApplicationsPage() {
           <h3>{item.decision.summary}</h3>
           {!!item.decision.reasons.length && <><h4>Причины решения</h4><ul>{item.decision.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></>}
           {!!item.decision.recommendations.length && <><h4>Что можно изменить</h4><ul>{item.decision.recommendations.map((tip) => <li key={tip}>{tip}</li>)}</ul></>}
-          {item.decision.outcome === 'APPROVED' && <Link className="button" to={`/approved/${item.id}`}>Продолжить</Link>}
+          {item.decision.outcome === 'APPROVED' && <LoanFulfillmentSummary application={item} />}
           {item.decision.outcome === 'REVISION' && <Link className="button" to="/calculator" state={{
             draft: { bankOfferId: item.bankOfferId, collateral: item.collateral, productId: item.productId, amount: item.decision.suggestedAmount ?? item.amount, months: item.months, purpose: item.purpose },
           }}>Заполнить заявку заново</Link>}

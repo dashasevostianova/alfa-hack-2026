@@ -51,7 +51,8 @@ export function FormationPage() {
       <h1>{done ? 'Формирование заявки завершено' : loading ? 'Данные заявки' : 'Формируем вашу заявку'}</h1>
       <p>Проверяем сведения о компании и подготавливаем данные для рассмотрения.</p></div>
     <section className="card formation" aria-busy={!done && !error}>
-      <p className="hint">Анимация этапов демонстрационная. Данные сохранены через Java API; модель принятия решения пока не подключена.</p>
+      <p className="hint">Анимация этапов демонстрационная. Данные сохранены через Java API; модель принятия решения пока не подключена.
+        {result?.decisionSource === 'DEMO' && ' Решение по кредиту симулируется сервером.'}</p>
       {error ? <><h2>Не удалось сформировать заявку</h2><p className="error" role="alert">{error}</p>
         <button className="button" onClick={() => setAttempt(value => value + 1)}>Повторить попытку</button></> : done ? <>
         <div className="formation-check" aria-hidden="true">✓</div>

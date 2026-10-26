@@ -1,3 +1,5 @@
+import type { BorrowerSnapshot, LoanFulfillment } from './loanFulfillment/types';
+
 export interface Credentials {
   login: string;
   password: string;
@@ -80,6 +82,10 @@ export interface Decision {
 }
 
 export interface LoanApplication extends ApplicationDraft {
+  decisionSource?: 'DEMO';
+  decisionAt?: string;
+  borrowerSnapshot?: BorrowerSnapshot;
+  fulfillment?: LoanFulfillment;
   id: string;
   createdAt: string;
   productName: string;

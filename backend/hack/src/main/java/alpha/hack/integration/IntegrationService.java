@@ -5,6 +5,7 @@ import alpha.hack.enums.Purpose;
 import alpha.hack.enums.LegalForm;
 import alpha.hack.enums.BusinessStatus;
 import alpha.hack.service.ApplicationService;
+import alpha.hack.fulfillment.DemoLoanReview;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -21,9 +22,10 @@ public class IntegrationService {
     private final ObjectMapper json;
     private final ExternalServices external;
     private final ApplicationService applications;
+    private final DemoLoanReview demoReview;
     private static final List<String> PURPOSES = List.of("Пополнение оборотных средств", "Покупка оборудования", "Развитие бизнеса", "Ремонт помещения");
-    public IntegrationService(JdbcTemplate jdbc, ObjectMapper json, ExternalServices external, ApplicationService applications) {
-        this.jdbc = jdbc; this.json = json; this.external = external; this.applications = applications;
+    public IntegrationService(JdbcTemplate jdbc, ObjectMapper json, ExternalServices external, ApplicationService applications, DemoLoanReview demoReview) {
+        this.jdbc = jdbc; this.json = json; this.external = external; this.applications = applications; this.demoReview = demoReview;
     }
     @SuppressWarnings("unchecked") private Map<String, Object> map(Object value) { return (Map<String, Object>) value; }
     private Map<String, Object> read(String value) { return map(json.readValue(value, Map.class)); }
@@ -117,6 +119,11 @@ public class IntegrationService {
         result.put("formationStatus", status); result.put("decision", null); result.put("annualRate", row.get("rate"));
         result.put("finances", finances); result.put("company", Map.of()); result.put("calculated", Map.of()); result.put("warnings", List.of()); result.put("source", "legacy");
         if (snapshot.get("prepared") instanceof Map<?, ?>) {
+            if (snapshot.get("profile") instanceof Map<?, ?>) {
+                var borrower = map(snapshot.get("profile"));
+                result.put("borrowerSnapshot", Map.of("fullName", text(borrower, "fullName"),
+                    "companyName", text(borrower, "companyName"), "inn", text(borrower, "inn")));
+            }
             var prepared = map(snapshot.get("prepared")); var report = map(prepared.get("report"));
             result.put("company", prepared.get("company")); result.put("calculated", report.get("calculated"));
             result.put("source", report.get("source")); result.put("warnings", report.get("warnings"));
@@ -131,7 +138,7 @@ public class IntegrationService {
                 result.put("rateWarning", "Ставка старой заявки не содержит продукт и единицу измерения; требуется новый расчёт.");
             }
         }
-        // No fabricated model decisions. Existing DB decisions, if present, are displayed.
+        // Existing real decisions always take priority over the optional demo adapter.
         var decisions = jdbc.queryForList("SELECT * FROM decision WHERE decision_id=? ORDER BY created_at DESC,id DESC LIMIT 1", id);
         if (!decisions.isEmpty()) {
             var decision = decisions.getFirst(); String outcome = text(decision, "decision");
@@ -141,6 +148,8 @@ public class IntegrationService {
             if (decision.get("approved_amount") != null) view.put("suggestedAmount", decision.get("approved_amount"));
             result.put("decision", view);
         }
-        return result;
+        var fulfillment = jdbc.queryForList("SELECT payload::text FROM loan_fulfillment WHERE application_id=?", String.class, id);
+        if (!fulfillment.isEmpty()) result.put("fulfillment", read(fulfillment.getFirst()));
+        return demoReview.apply(user, id, result);
     }
 }

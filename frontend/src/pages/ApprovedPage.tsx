@@ -1,4 +1,6 @@
+import { Navigate, useParams } from 'react-router-dom';
+
 export function ApprovedPage() {
-  // TODO: следующий этап после одобрения; по ТЗ пока пустая страница.
-  return <div className="approved-placeholder" aria-label="Следующий этап оформления кредита" />;
+  const { id } = useParams();
+  return <Navigate to={id ? `/applications/${encodeURIComponent(id)}/sign` : '/applications'} replace />;
 }

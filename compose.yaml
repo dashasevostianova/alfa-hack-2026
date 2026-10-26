@@ -26,7 +26,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
     volumes:
       - ./Docker/init/03_integration.sql:/migration.sql:ro
-    command: [psql, -v, ON_ERROR_STOP=1, -f, /migration.sql]
+      - ./Docker/init/04_loan_fulfillment.sql:/loan-fulfillment.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migration.sql, -f, /loan-fulfillment.sql]
     restart: 'no'
   formation:
     build: ./backend/formation
@@ -54,6 +55,7 @@ services:
       SPRING_JPA_SHOW_SQL: 'false'
       FORMATION_URL: http://formation:8081
       PARSER_URL: http://parser:8000
+      LOAN_DEMO_DECISION_ENABLED: ${LOAN_DEMO_DECISION_ENABLED:-true}
       TZ: UTC
     depends_on:
       migrate: {condition: service_completed_successfully}

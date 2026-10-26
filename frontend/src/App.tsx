@@ -12,6 +12,8 @@ import { DataPage } from './pages/DataPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { ApprovedPage } from './pages/ApprovedPage';
+import { DocumentSigningPage } from './pages/DocumentSigningPage';
+import { LoanIssuedPage } from './pages/LoanIssuedPage';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +45,8 @@ export default function App() {
       <Route path="/applications/:id/formation" element={<FormationPage />} />
       <Route path="/applications" element={<ApplicationsPage />} />
       <Route path="/approved/:id" element={<ApprovedPage />} />
+      <Route path="/applications/:id/sign" element={<DocumentSigningPage />} />
+      <Route path="/applications/:id/issued" element={<LoanIssuedPage />} />
     </Route>
     <Route path="*" element={<Navigate to={user ? '/data' : '/login'} replace />} />
   </Routes></BrowserRouter></SessionContext.Provider>;

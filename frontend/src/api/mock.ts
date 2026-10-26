@@ -36,6 +36,25 @@ function current(db: Database): Account {
   if (!account) throw new Error('Сессия завершена. Войдите снова.');
   return account;
 }
+
+// Synchronous read/check/write within a shared lock for the new module.
+// The existing database key, account isolation and scoring remain unchanged.
+export async function withMockApplication<T>(id: string,
+  operation: (application: LoanApplication, account: Readonly<Account>) => T): Promise<T> {
+  const run = () => {
+    const db = readDb();
+    const account = current(db);
+    const index = account.applications.findIndex(item => item.id === id);
+    if (index < 0) throw new Error('Заявка не найдена или недоступна.');
+    const application = progressApplication(account.applications[index]);
+    account.applications[index] = application;
+    const result = operation(application, account);
+    writeDb(db);
+    return result;
+  };
+  return typeof navigator !== 'undefined' && navigator.locks
+    ? navigator.locks.request(MOCK_KEY, run) : run();
+}
 async function hash(password: string) {
   // Демо-хеш предотвращает хранение открытого пароля. Реальное хеширование — на Spring Boot.
   const result = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
@@ -131,6 +150,9 @@ export const mockApi: Api = {
     const application: LoanApplication = {
       ...draft, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
       productName: product.name, annualRate: product.annualRate, status: 'SUBMITTED', decision: null,
+      borrowerSnapshot: account.profile ? {
+        fullName: account.profile.fullName, companyName: account.profile.companyName, inn: account.profile.inn,
+      } : undefined,
     };
     account.applications.unshift(application);
     writeDb(db);
